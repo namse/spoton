@@ -89,7 +89,6 @@ export const handler = async (event, _context) => {
           InstanceInterruptionBehavior: "hibernate",
         },
       },
-      KeyName: "namse", // Make sure you have the key pair
       MaxCount: 1,
       MinCount: 1,
       Placement: {
