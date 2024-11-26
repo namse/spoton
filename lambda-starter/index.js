@@ -68,7 +68,7 @@ export const handler = async (event, _context) => {
       Filters: [
         {
           Name: "tag:Name",
-          Values: ["spoton-snapshot"],
+          Values: ["spoton"],
         },
       ],
     })
