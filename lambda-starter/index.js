@@ -11,7 +11,7 @@ import {
 /**
  * @type {import('aws-lambda').LambdaFunctionURLHandler}
  */
-export const handler = async (event, context) => {
+export const handler = async (event, _context) => {
   if (event.headers.passcode !== process.env.PASSCODE) {
     return {
       statusCode: 401,

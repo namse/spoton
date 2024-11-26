@@ -1,12 +1,11 @@
 {
-  "name": "starter",
+  "name": "janitor",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "devDependencies": {
-    "@aws-sdk/client-ec2": "^3.699.0",
-    "aws-lambda": "^1.0.7"
+    "@aws-sdk/client-ec2": "^3.699.0"
   }
 }

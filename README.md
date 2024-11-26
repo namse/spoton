@@ -11,6 +11,8 @@ Starts Spot Instance triggered by Lambda function url.
 ## Janitor
 
 Remove unused resources like Dangling EBS Volumes, Old Snapshots, etc which are not free charged.
+Janitor also create snapshot of EBS volumes before removing them. Also only latest snapshot is kept.
+Janitor is triggered by CloudWatch Event Rule, created by cdk.
 
 ## Connect
 
