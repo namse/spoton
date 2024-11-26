@@ -41,7 +41,6 @@ export const handler = async (event, _context) => {
   const region = "ap-northeast-2";
   const instanceType = "c7i.2xlarge";
 
-  // find az by spot price
   const priceHistory = await ec2.send(
     new DescribeSpotPriceHistoryCommand({
       Filters: [
@@ -56,12 +55,9 @@ export const handler = async (event, _context) => {
     })
   );
 
-  // find cheapest az
   const az = priceHistory.SpotPriceHistory.reduce((acc, cur) => {
     return acc.SpotPrice < cur.SpotPrice ? acc : cur;
   }).AvailabilityZone;
-
-  // get ebs from snapshot, or if snapshot not exists, create new one
 
   const snapshotData = await ec2.send(
     new DescribeSnapshotsCommand({
@@ -80,8 +76,6 @@ export const handler = async (event, _context) => {
           return acc.StartTime > cur.StartTime ? acc : cur;
         }).SnapshotId
       : undefined;
-
-  // create spot instance with volume
 
   const instance = await ec2.send(
     new RunInstancesCommand({
