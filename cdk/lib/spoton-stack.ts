@@ -95,7 +95,7 @@ export class SpotonStack extends cdk.Stack {
       this,
       "JanitorEventsRule",
       {
-        schedule: cdk.aws_events.Schedule.rate(cdk.Duration.minutes(5)),
+        schedule: cdk.aws_events.Schedule.rate(cdk.Duration.minutes(1)),
       }
     );
 
