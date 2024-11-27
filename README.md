@@ -4,7 +4,7 @@ Spoton is EC2 Spot instance manage service to use sport instance as development 
 
 # Components
 
-## Lambda-Starter
+## Starter
 
 Starts Spot Instance triggered by Lambda function url.
 
