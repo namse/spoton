@@ -53,6 +53,7 @@ export class SpotonStack extends cdk.Stack {
           .readFileSync(path.join(__dirname, "../../janitor/index.js"))
           .toString()
       ),
+      // NOTE: Maybe you need this doc: https://docs.aws.amazon.com/ko_kr/service-authorization/latest/reference/list_amazonec2.html
       initialPolicy: [
         new cdk.aws_iam.PolicyStatement({
           actions: [
@@ -71,7 +72,7 @@ export class SpotonStack extends cdk.Stack {
           resources: ["*"],
           conditions: {
             StringEquals: {
-              "ec2:ResourceTag/Name": "spoton",
+              "aws:ResourceTag/Name": "spoton",
             },
           },
         }),
@@ -80,8 +81,8 @@ export class SpotonStack extends cdk.Stack {
           resources: ["*"],
           conditions: {
             StringEquals: {
-              "ec2:ResourceTag/Name": "spoton",
-              "ec2:RequestTag/Name": "spoton",
+              "aws:ResourceTag/Name": "spoton",
+              "aws:RequestTag/Name": "spoton",
             },
           },
         }),
