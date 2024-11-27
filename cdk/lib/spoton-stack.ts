@@ -79,12 +79,6 @@ export class SpotonStack extends cdk.Stack {
         new cdk.aws_iam.PolicyStatement({
           actions: ["ec2:CreateSnapshot"],
           resources: ["*"],
-          conditions: {
-            StringEquals: {
-              "aws:ResourceTag/Name": "spoton",
-              "aws:RequestTag/Name": "spoton",
-            },
-          },
         }),
       ],
       architecture: cdk.aws_lambda.Architecture.ARM_64,
