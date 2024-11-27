@@ -80,6 +80,15 @@ export class SpotonStack extends cdk.Stack {
           actions: ["ec2:CreateSnapshot"],
           resources: ["*"],
         }),
+        new cdk.aws_iam.PolicyStatement({
+          actions: ["ec2:CreateTags"],
+          resources: ["*"],
+          conditions: {
+            StringEquals: {
+              "ec2:CreateAction": ["CreateSnapshot"],
+            },
+          },
+        }),
       ],
       architecture: cdk.aws_lambda.Architecture.ARM_64,
       timeout: cdk.Duration.minutes(3),
@@ -119,20 +128,16 @@ export class SpotonStack extends cdk.Stack {
       },
       initialPolicy: [
         new cdk.aws_iam.PolicyStatement({
-          actions: [
-            "ec2:DescribeInstances",
-            "ec2:DescribeSnapshots",
-            "ec2:RunInstances",
-          ],
+          actions: ["ec2:DescribeInstances", "ec2:DescribeSnapshots"],
+          resources: ["*"],
+        }),
+        new cdk.aws_iam.PolicyStatement({
+          actions: ["ec2:RunInstances"],
           resources: ["*"],
         }),
         new cdk.aws_iam.PolicyStatement({
           actions: ["ec2:CreateTags", "ec2:CreateVolume"],
-          resources: [
-            `arn:aws:ec2:${cdk.Stack.of(this).region}:${
-              cdk.Stack.of(this).account
-            }:*/*`,
-          ],
+          resources: ["*"],
           conditions: {
             StringEquals: {
               "ec2:CreateAction": ["RunInstances"],

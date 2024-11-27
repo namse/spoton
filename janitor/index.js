@@ -31,6 +31,10 @@ async function removeUnusedEbs(ec2) {
           Name: "tag:Name",
           Values: ["spoton"],
         },
+        {
+          Name: "status",
+          Values: ["available"],
+        },
       ],
     })
   );
