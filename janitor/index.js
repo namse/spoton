@@ -2,9 +2,11 @@ import {
   CreateSnapshotCommand,
   DeleteSnapshotCommand,
   DeleteVolumeCommand,
+  DescribeInstancesCommand,
   DescribeSnapshotsCommand,
   DescribeVolumesCommand,
   EC2Client,
+  TerminateInstancesCommand,
 } from "@aws-sdk/client-ec2";
 
 // @ts-check
@@ -14,6 +16,7 @@ export const handler = async (_event, _context) => {
 
   await removeUnusedEbs(ec2);
   await keepOneSnapshot(ec2);
+  await killZombieInstances(ec2);
 };
 
 /**
@@ -91,4 +94,47 @@ async function keepOneSnapshot(ec2) {
       })
     );
   }
+}
+
+/**
+ * @param {EC2Client} ec2
+ * @returns {Promise<void>}
+ **/
+async function killZombieInstances(ec2) {
+  const { Reservations } = await ec2.send(
+    new DescribeInstancesCommand({
+      Filters: [
+        {
+          Name: "tag:Name",
+          Values: ["spoton"],
+        },
+      ],
+    })
+  );
+
+  const instanceIds = [];
+
+  for (const reservation of Reservations || []) {
+    for (const instance of reservation.Instances || []) {
+      if (instance.State !== "running") {
+        continue;
+      }
+      const uptime = new Date() - new Date(instance.LaunchTime);
+      const hours8 = 8 * 3600 * 1000;
+      if (uptime > hours8) {
+        console.log("WARNING: Found zombie instance", instance);
+        instanceIds.push(instance.InstanceId);
+      }
+    }
+  }
+
+  if (!instanceIds.length) {
+    return;
+  }
+
+  await ec2.send(
+    new TerminateInstancesCommand({
+      InstanceIds: instanceIds,
+    })
+  );
 }
