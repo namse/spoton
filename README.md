@@ -17,9 +17,3 @@ Janitor is triggered by CloudWatch Event Rule, created by cdk.
 ## Connect
 
 Find and connect to the spot instance using vscode on client.
-
-## Spoton Setup
-
-First-time setup for spoton instance, recording to ebs volume.
-
-Setup contains disconnection detection and snapshot creation, self-termination.
