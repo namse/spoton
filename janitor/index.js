@@ -1,4 +1,4 @@
-import {
+const {
   CreateSnapshotCommand,
   DeleteSnapshotCommand,
   DeleteVolumeCommand,
@@ -7,11 +7,11 @@ import {
   DescribeVolumesCommand,
   EC2Client,
   TerminateInstancesCommand,
-} from "@aws-sdk/client-ec2";
+} = require("@aws-sdk/client-ec2");
 
 // @ts-check
 
-export const handler = async (_event, _context) => {
+exports.handler = async (_event, _context) => {
   const ec2 = new EC2Client();
 
   await removeUnusedEbs(ec2);

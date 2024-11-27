@@ -4,7 +4,7 @@ set -e
 
 instance_id=$(aws ec2 describe-instances \
     --region ap-northeast-2 \
-    --filters "Name=tag:Name,Values=spoton" \
+    --filters "Name=tag:Name,Values=spoton" "Name=instance-state-name,Values=running" \
     --query "Reservations[*].Instances[*].InstanceId" \
     --output text)
 
@@ -13,7 +13,7 @@ if [ -z "$instance_id" ]; then
     exit 1
 fi
 
-ssh-keygen -t rsa -f /tmp/spoton_key -N ""
+ssh-keygen -t rsa -f /tmp/spoton_key -N "" <<<y >/dev/null 2>&1
 
 aws ec2-instance-connect send-ssh-public-key \
     --region ap-northeast-2 \

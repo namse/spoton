@@ -1,17 +1,16 @@
-import {
+const {
   DescribeInstancesCommand,
   DescribeSnapshotsCommand,
-  DescribeSpotPriceHistoryCommand,
   EC2Client,
   RunInstancesCommand,
-} from "@aws-sdk/client-ec2";
+} = require("@aws-sdk/client-ec2");
 
 // @ts-check
 
 /**
  * @type {import('aws-lambda').LambdaFunctionURLHandler}
  */
-export const handler = async (event, _context) => {
+exports.handler = async (event, _context) => {
   if (event.headers.passcode !== process.env.PASSCODE) {
     return {
       statusCode: 401,
@@ -21,43 +20,26 @@ export const handler = async (event, _context) => {
 
   const ec2 = new EC2Client();
 
-  const data = await ec2.send(
+  const runningInstances = await ec2.send(
     new DescribeInstancesCommand({
       Filters: [
         {
           Name: "tag:Name",
           Values: ["spoton"],
         },
+        {
+          Name: "instance-state-name",
+          Values: ["running"],
+        },
       ],
     })
   );
-  if (data.Reservations.length) {
+  if (runningInstances.Reservations.length) {
     return {
       statusCode: 400,
       body: JSON.stringify({ message: "Instance already exists" }),
     };
   }
-
-  const region = "ap-northeast-2";
-  const instanceType = "c7i.2xlarge";
-
-  const priceHistory = await ec2.send(
-    new DescribeSpotPriceHistoryCommand({
-      Filters: [
-        {
-          Name: "availability-zone",
-          Values: ["a", "b", "c", "d"].map((az) => `${region}${az}`),
-        },
-      ],
-      InstanceTypes: [instanceType],
-      ProductDescriptions: ["Linux/UNIX"],
-      StartTime: new Date(),
-    })
-  );
-
-  const az = priceHistory.SpotPriceHistory.reduce((acc, cur) => {
-    return acc.SpotPrice < cur.SpotPrice ? acc : cur;
-  }).AvailabilityZone;
 
   const snapshotData = await ec2.send(
     new DescribeSnapshotsCommand({
@@ -77,7 +59,85 @@ export const handler = async (event, _context) => {
         }).SnapshotId
       : undefined;
 
-  const sshIdleShutdownScript = `
+  const subnetIds = process.env.VPC_SUBNET_IDS.split(",");
+  const instanceTypes = ["c7i-flex.2xlarge", "c7i.2xlarge"];
+  const securityGroupId = process.env.SECURITY_GROUP_ID;
+
+  let lastError;
+  for (const instanceType of instanceTypes) {
+    for (const subnetId of subnetIds) {
+      try {
+        const instance = await ec2.send(
+          new RunInstancesCommand({
+            ImageId:
+              "resolve:ssm:/aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id",
+            InstanceType: instanceType,
+            InstanceMarketOptions: {
+              MarketType: "spot",
+              SpotOptions: {
+                SpotInstanceType: "one-time",
+              },
+            },
+            SubnetId: subnetId,
+            SecurityGroupIds: [securityGroupId],
+            MaxCount: 1,
+            MinCount: 1,
+            BlockDeviceMappings: [
+              {
+                DeviceName: "/dev/xvda",
+                Ebs: {
+                  DeleteOnTermination: false,
+                  SnapshotId: latestSnapshotId,
+                  VolumeType: "gp3",
+                  VolumeSize: 64,
+                },
+              },
+            ],
+            TagSpecifications: [
+              {
+                ResourceType: "instance",
+                Tags: [
+                  {
+                    Key: "Name",
+                    Value: "spoton",
+                  },
+                ],
+              },
+              {
+                ResourceType: "volume",
+                Tags: [
+                  {
+                    Key: "Name",
+                    Value: "spoton",
+                  },
+                ],
+              },
+            ],
+            UserData: btoa(userData),
+          })
+        );
+
+        return {
+          statusCode: 200,
+          body: JSON.stringify({ message: "Instance created", instance }),
+        };
+      } catch (error) {
+        console.log(error);
+        lastError = error;
+      }
+    }
+  }
+
+  return {
+    statusCode: 500,
+    body: JSON.stringify({
+      message: "Instance creation failed",
+      error: lastError,
+    }),
+  };
+};
+
+const sshIdleShutdownScript = `
 #!/bin/bash
 
 STATE_FILE="/tmp/ssh_idle_count"
@@ -102,66 +162,9 @@ else
     echo 0 >"$STATE_FILE"
 fi
 `;
-
-  const userData = `#!/bin/bash
+const userData = `#!/bin/bash
+apt install net-tools -y
 echo "${btoa(sshIdleShutdownScript)}" | base64 -d >/tmp/ssh_idle_shutdown.sh
 chmod +x /tmp/ssh_idle_shutdown.sh
 (crontab -l 2>/dev/null; echo "*/3 * * * * /tmp/ssh_idle_shutdown.sh") | crontab -
 `;
-
-  const instance = await ec2.send(
-    new RunInstancesCommand({
-      ImageId:
-        "resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64",
-      InstanceType: instanceType,
-      InstanceMarketOptions: {
-        MarketType: "spot",
-        SpotOptions: {
-          SpotInstanceType: "one-time",
-        },
-      },
-      MaxCount: 1,
-      MinCount: 1,
-      Placement: {
-        AvailabilityZone: az,
-      },
-      BlockDeviceMappings: [
-        {
-          DeviceName: "/dev/xvda",
-          Ebs: {
-            DeleteOnTermination: false,
-            SnapshotId: latestSnapshotId,
-            VolumeType: "gp3",
-            VolumeSize: 64,
-          },
-        },
-      ],
-      TagSpecifications: [
-        {
-          ResourceType: "instance",
-          Tags: [
-            {
-              Key: "Name",
-              Value: "spoton",
-            },
-          ],
-        },
-        {
-          ResourceType: "volume",
-          Tags: [
-            {
-              Key: "Name",
-              Value: "spoton",
-            },
-          ],
-        },
-      ],
-      UserData: userData,
-    })
-  );
-
-  return {
-    statusCode: 200,
-    body: JSON.stringify({ message: "Instance created", instance }),
-  };
-};
